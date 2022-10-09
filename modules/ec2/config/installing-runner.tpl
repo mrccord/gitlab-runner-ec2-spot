@@ -24,11 +24,9 @@ sudo systemctl daemon-reload
 sudo systemctl restart docker
 
 ###### Installing Docker Machine #######
-
-base=https://github.com/docker/machine/releases/download/v0.16.0 \
-  && curl -L $base/docker-machine-$(uname -s)-$(uname -m) >/tmp/docker-machine \
-  && sudo mv /tmp/docker-machine /usr/local/bin/docker-machine \
-  && chmod +x /usr/local/bin/docker-machine
+curl -O "https://gitlab-docker-machine-downloads.s3.amazonaws.com/v0.16.2-gitlab.11/docker-machine-Linux-x86_64"
+cp docker-machine-Linux-x86_64 /usr/local/bin/docker-machine
+chmod +x /usr/local/bin/docker-machine
 
 
 ###### Installing gitlab runner #######
@@ -40,7 +38,8 @@ sudo -E apt-get install gitlab-runner -y
 
 cat <<EOF > /etc/gitlab-runner/config.template.toml
 [[runners]]
-  limit = 6
+  name="gitlab-aws-autoscaler"
+  limit = 3
   [runners.docker]
     privileged = true
     disable_cache = true
@@ -53,15 +52,16 @@ cat <<EOF > /etc/gitlab-runner/config.template.toml
       ServerAddress = "s3.amazonaws.com"
       AccessKey = "${aws_access_key}"
       SecretKey = "${aws_secret_key}"
-      BucketName = "gitlab-runner-cache-s3-bizware"
+      BucketName = "gitlab-runner-cache-s3"
       BucketLocation = "us-east-1"
   [runners.machine]
-    IdleCount = 1
+    IdleCount = 0
     MaxBuilds = 10
     MaxGrowthRate = 1
     MachineDriver = "amazonec2"
     MachineName = "gitlab-runner-%s"
     MachineOptions = [
+      "engine-install-url=https://get.docker.com|head -n-1|cat - <(echo -e \"VERSION=19.03.9\\nCHANNEL=stable\\ndo_install\")"
       "amazonec2-access-key=${aws_access_key}", 
       "amazonec2-secret-key=${aws_secret_key}", 
       "amazonec2-ssh-user=ubuntu", 
@@ -73,7 +73,7 @@ cat <<EOF > /etc/gitlab-runner/config.template.toml
       "amazonec2-use-private-address=true",
       "amazonec2-zone=a",
       "amazonec2-request-spot-instance=true", 
-      "amazonec2-spot-price=0.09"
+      "amazonec2-spot-price=0.5"
     ]
 EOF
 

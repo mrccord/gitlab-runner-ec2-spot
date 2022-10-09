@@ -35,3 +35,4 @@ terraform.rc
 
 exports.sh
 **/public_key/*
+creds
